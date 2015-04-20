@@ -248,7 +248,6 @@ public class AuthenticatorActivity extends TestableActivity {
         addAccount();
       }
     });
-    mEnterPinPrompt = (TextView) findViewById(R.id.enter_pin_prompt);
 
     mUserAdapter = new PinListAdapter(this, R.layout.user_row, mUsers);
 
