@@ -164,6 +164,8 @@ public class AuthenticatorActivity extends TestableActivity {
   // @VisibleForTesting
   public static final int EDIT_ID = 1;
   // @VisibleForTesting
+  public static final int EXPORT_ID = 2;
+  // @VisibleForTesting
   static final int SCAN_REQUEST = 31337;
 
   /** Called when the activity is first created. */
@@ -707,16 +709,24 @@ public class AuthenticatorActivity extends TestableActivity {
     OtpType type = mAccountDb.getType(user);
     menu.setHeaderTitle(user);
     menu.add(0, EDIT_ID, 0, R.string.edit);
+    menu.add(0, EXPORT_ID, 0, R.string.export);
   }
 
   @Override
   public boolean onContextItemSelected(MenuItem item) {
+    Intent intent;
     AdapterContextMenuInfo info = (AdapterContextMenuInfo) item.getMenuInfo();
     final String user = idToEmail(info.id); // final so listener can see value
     switch (item.getItemId()) {
       case EDIT_ID:
-        Intent intent = new Intent(Intent.ACTION_EDIT);
+        intent = new Intent(Intent.ACTION_EDIT);
         intent.setClass(AuthenticatorActivity.this, TokenEditActivity.class);
+        intent.putExtra("user", user);
+        startActivity(intent);
+        return true;
+      case EXPORT_ID:
+        intent = new Intent(Intent.ACTION_EDIT);
+        intent.setClass(AuthenticatorActivity.this, SecretExportActivity.class);
         intent.putExtra("user", user);
         startActivity(intent);
         return true;

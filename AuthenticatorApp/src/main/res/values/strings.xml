@@ -215,6 +215,9 @@
   <!-- Long-press menu item for an account, used to edit that account -->
   <string name="edit">Edit</string>
 
+  <!-- Long-press menu item for an account, used to Export that account -->
+  <string name="export">Export</string>
+
   <!-- Text in dialog shown when user selects "Rename" menu item for a given
        account, with the parameter indicating existing account name -->
   <string name="rename_message">Rename <xliff:g id="account" example="mallory@gmail.com">%1$s</xliff:g></string>
