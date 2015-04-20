@@ -224,6 +224,8 @@
        to the phone clipboard -->
   <string name="copy_to_clipboard">Copy to clipboard</string>
 
+  <string name="copied_to_clipboard">Token copied to clipboard</string>
+
   <!-- Text reported to the accessibility system (e.g., on screen reader)
        when the user selects a counter-based account (from the account list)
        for which no code is currently displayed/generated.

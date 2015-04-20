@@ -255,14 +255,16 @@ public class AuthenticatorActivity extends TestableActivity {
     mUserList.setAdapter(mUserAdapter);
     mUserList.setOnItemClickListener(new OnItemClickListener(){
         @Override
-        public void onItemClick(AdapterView<?> unusedParent, View row,
-                                int unusedPosition, long unusedId) {
-            NextOtpButtonListener clickListener = (NextOtpButtonListener) row.getTag();
-            View nextOtp = row.findViewById(R.id.next_otp);
-            if ((clickListener != null) && nextOtp.isEnabled()){
-                clickListener.onClick(row);
-            }
-            mUserList.sendAccessibilityEvent(AccessibilityEvent.TYPE_VIEW_SELECTED);
+        public void onItemClick(AdapterView<?> parent, View row,
+                                int position, long unusedId) {
+          PinInfo pin = (PinInfo) parent.getItemAtPosition(position);
+          Intent intent = new Intent(Intent.ACTION_VIEW);
+          intent.setClass(AuthenticatorActivity.this, TokenViewActivity.class);
+Log.i(LOCAL_TAG, "-------");
+Log.i(LOCAL_TAG, pin.user);
+Log.i(LOCAL_TAG, "-------");
+          intent.putExtra("user", pin.user);
+          startActivity(intent);
         }
     });
 

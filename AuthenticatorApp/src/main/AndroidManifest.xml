@@ -48,6 +48,9 @@
       </intent-filter>
     </activity>
 
+    <activity android:name="com.google.android.apps.authenticator.TokenViewActivity"
+              android:label="@string/app_name_short" />
+
     <activity android:name="com.google.android.apps.authenticator.SettingsAboutActivity"
               android:label="@string/about_preference_screen_title" />
 
