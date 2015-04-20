@@ -162,9 +162,7 @@ public class AuthenticatorActivity extends TestableActivity {
   private static final String SECRET_PARAM = "secret";
   private static final String COUNTER_PARAM = "counter";
   // @VisibleForTesting
-  public static final int RENAME_ID = 1;
-  // @VisibleForTesting
-  public static final int REMOVE_ID = 2;
+  public static final int EDIT_ID = 1;
   // @VisibleForTesting
   static final int SCAN_REQUEST = 31337;
 
@@ -445,26 +443,6 @@ public class AuthenticatorActivity extends TestableActivity {
     }
   }
 
-  private DialogInterface.OnClickListener getRenameClickListener(final Context context,
-      final String user, final EditText nameEdit) {
-    return new DialogInterface.OnClickListener() {
-      @Override
-      public void onClick(DialogInterface dialog, int whichButton) {
-        String newName = nameEdit.getText().toString();
-        if (newName != user) {
-          if (mAccountDb.nameExists(newName)) {
-            Toast.makeText(context, R.string.error_exists, Toast.LENGTH_LONG).show();
-          } else {
-            saveSecretAndRefreshUserList(newName,
-                mAccountDb.getSecret(user), user, mAccountDb.getType(user),
-                mAccountDb.getCounter(user));
-          }
-          refreshUserList(true);
-        }
-      }
-    };
-  }
-
   @Override
   public boolean onCreateOptionsMenu(Menu menu) {
     getMenuInflater().inflate(R.menu.main, menu);
@@ -728,60 +706,19 @@ public class AuthenticatorActivity extends TestableActivity {
     String user = idToEmail(info.id);
     OtpType type = mAccountDb.getType(user);
     menu.setHeaderTitle(user);
-    menu.add(0, RENAME_ID, 0, R.string.rename);
-    menu.add(0, REMOVE_ID, 0, R.string.context_menu_remove_account);
+    menu.add(0, EDIT_ID, 0, R.string.edit);
   }
 
   @Override
   public boolean onContextItemSelected(MenuItem item) {
     AdapterContextMenuInfo info = (AdapterContextMenuInfo) item.getMenuInfo();
-    Intent intent;
     final String user = idToEmail(info.id); // final so listener can see value
     switch (item.getItemId()) {
-      case RENAME_ID:
-        final Context context = this; // final so listener can see value
-        final View frame = getLayoutInflater().inflate(R.layout.rename,
-            (ViewGroup) findViewById(R.id.rename_root));
-        final EditText nameEdit = (EditText) frame.findViewById(R.id.rename_edittext);
-        nameEdit.setText(user);
-        new AlertDialog.Builder(this)
-        .setTitle(String.format(getString(R.string.rename_message), user))
-        .setView(frame)
-        .setPositiveButton(R.string.submit,
-            this.getRenameClickListener(context, user, nameEdit))
-        .setNegativeButton(R.string.cancel, null)
-        .show();
-        return true;
-      case REMOVE_ID:
-        // Use a WebView to display the prompt because it contains non-trivial markup, such as list
-        View promptContentView =
-            getLayoutInflater().inflate(R.layout.remove_account_prompt, null, false);
-        WebView webView = (WebView) promptContentView.findViewById(R.id.web_view);
-        webView.setBackgroundColor(Color.TRANSPARENT);
-        Utilities.setWebViewHtml(
-            webView,
-            "<html><body style=\"background-color: transparent;\" text=\"white\">"
-                + getString(
-                    mAccountDb.isGoogleAccount(user)
-                        ? R.string.remove_google_account_dialog_message
-                        : R.string.remove_account_dialog_message)
-                + "</body></html>");
-
-        new AlertDialog.Builder(this)
-          .setTitle(getString(R.string.remove_account_dialog_title, user))
-          .setView(promptContentView)
-          .setIcon(android.R.drawable.ic_dialog_alert)
-          .setPositiveButton(R.string.remove_account_dialog_button_remove,
-              new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int whichButton) {
-                  mAccountDb.delete(user);
-                  refreshUserList(true);
-                }
-              }
-          )
-          .setNegativeButton(R.string.cancel, null)
-          .show();
+      case EDIT_ID:
+        Intent intent = new Intent(Intent.ACTION_EDIT);
+        intent.setClass(AuthenticatorActivity.this, TokenEditActivity.class);
+        intent.putExtra("user", user);
+        startActivity(intent);
         return true;
       default:
         return super.onContextItemSelected(item);
