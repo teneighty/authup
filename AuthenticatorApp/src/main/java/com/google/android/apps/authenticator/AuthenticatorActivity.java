@@ -109,29 +109,9 @@ public class AuthenticatorActivity extends TestableActivity {
 
   private View mContentNoAccounts;
   private View mContentAccountsPresent;
-  private TextView mEnterPinPrompt;
   private ListView mUserList;
   private PinListAdapter mUserAdapter;
   private PinInfo[] mUsers = {};
-
-  /** Counter used for generating TOTP verification codes. */
-  private TotpCounter mTotpCounter;
-
-  /** Clock used for generating TOTP verification codes. */
-  private TotpClock mTotpClock;
-
-  /**
-   * Task that periodically notifies this activity about the amount of time remaining until
-   * the TOTP codes refresh. The task also notifies this activity when TOTP codes refresh.
-   */
-  private TotpCountdownTask mTotpCountdownTask;
-
-  /**
-   * Phase of TOTP countdown indicators. The phase is in {@code [0, 1]} with {@code 1} meaning
-   * full time step remaining until the code refreshes, and {@code 0} meaning the code is refreshing
-   * right now.
-   */
-  private double mTotpCountdownPhase;
   private AccountDb mAccountDb;
   private OtpSource mOtpProvider;
 
@@ -182,13 +162,9 @@ public class AuthenticatorActivity extends TestableActivity {
   private static final String SECRET_PARAM = "secret";
   private static final String COUNTER_PARAM = "counter";
   // @VisibleForTesting
-  public static final int CHECK_KEY_VALUE_ID = 0;
-  // @VisibleForTesting
   public static final int RENAME_ID = 1;
   // @VisibleForTesting
   public static final int REMOVE_ID = 2;
-  // @VisibleForTesting
-  static final int COPY_TO_CLIPBOARD_ID = 3;
   // @VisibleForTesting
   static final int SCAN_REQUEST = 31337;
 
@@ -203,9 +179,6 @@ public class AuthenticatorActivity extends TestableActivity {
     // Use a different (longer) title from the one that's declared in the manifest (and the one that
     // the Android launcher displays).
     setTitle(R.string.app_name);
-
-    mTotpCounter = mOtpProvider.getTotpCounter();
-    mTotpClock = mOtpProvider.getTotpClock();
 
     setContentView(R.layout.main);
 
@@ -260,9 +233,6 @@ public class AuthenticatorActivity extends TestableActivity {
           PinInfo pin = (PinInfo) parent.getItemAtPosition(position);
           Intent intent = new Intent(Intent.ACTION_VIEW);
           intent.setClass(AuthenticatorActivity.this, TokenViewActivity.class);
-Log.i(LOCAL_TAG, "-------");
-Log.i(LOCAL_TAG, pin.user);
-Log.i(LOCAL_TAG, "-------");
           intent.putExtra("user", pin.user);
           startActivity(intent);
         }
@@ -275,6 +245,13 @@ Log.i(LOCAL_TAG, "-------");
       importDataFromOldAppIfNecessary();
       handleIntent(getIntent());
     }
+  }
+
+  @Override
+  protected void onStart() {
+    super.onStart();
+
+    refreshUserList(false);
   }
 
   /**
@@ -319,182 +296,6 @@ Log.i(LOCAL_TAG, "-------");
   protected void onNewIntent(Intent intent) {
     Log.i(getString(R.string.app_name), LOCAL_TAG + ": onNewIntent");
     handleIntent(intent);
-  }
-
-  @Override
-  protected void onStart() {
-    super.onStart();
-
-    updateCodesAndStartTotpCountdownTask();
-  }
-
-  @Override
-  protected void onResume() {
-    super.onResume();
-    Log.i(getString(R.string.app_name), LOCAL_TAG + ": onResume");
-
-    importDataFromOldAppIfNecessary();
-  }
-
-  @Override
-  protected void onStop() {
-    stopTotpCountdownTask();
-
-    super.onStop();
-  }
-
-  private void updateCodesAndStartTotpCountdownTask() {
-    stopTotpCountdownTask();
-
-    mTotpCountdownTask =
-        new TotpCountdownTask(mTotpCounter, mTotpClock, TOTP_COUNTDOWN_REFRESH_PERIOD);
-    mTotpCountdownTask.setListener(new TotpCountdownTask.Listener() {
-      @Override
-      public void onTotpCountdown(long millisRemaining) {
-        if (isFinishing()) {
-          // No need to reach to this even because the Activity is finishing anyway
-          return;
-        }
-        setTotpCountdownPhaseFromTimeTillNextValue(millisRemaining);
-      }
-
-      @Override
-      public void onTotpCounterValueChanged() {
-        if (isFinishing()) {
-          // No need to reach to this even because the Activity is finishing anyway
-          return;
-        }
-        refreshVerificationCodes();
-      }
-    });
-
-    mTotpCountdownTask.startAndNotifyListener();
-  }
-
-  private void stopTotpCountdownTask() {
-    if (mTotpCountdownTask != null) {
-      mTotpCountdownTask.stop();
-      mTotpCountdownTask = null;
-    }
-  }
-
-  /** Display list of user emails and updated pin codes. */
-  protected void refreshUserList() {
-    refreshUserList(false);
-  }
-
-  private void setTotpCountdownPhase(double phase) {
-    mTotpCountdownPhase = phase;
-    updateCountdownIndicators();
-  }
-
-  private void setTotpCountdownPhaseFromTimeTillNextValue(long millisRemaining) {
-    setTotpCountdownPhase(
-        ((double) millisRemaining) / Utilities.secondsToMillis(mTotpCounter.getTimeStep()));
-  }
-
-  private void refreshVerificationCodes() {
-    refreshUserList();
-    setTotpCountdownPhase(1.0);
-  }
-
-  private void updateCountdownIndicators() {
-    for (int i = 0, len = mUserList.getChildCount(); i < len; i++) {
-      View listEntry = mUserList.getChildAt(i);
-      CountdownIndicator indicator =
-          (CountdownIndicator) listEntry.findViewById(R.id.countdown_icon);
-      if (indicator != null) {
-        indicator.setPhase(mTotpCountdownPhase);
-      }
-    }
-  }
-
-  /**
-   * Display list of user emails and updated pin codes.
-   *
-   * @param isAccountModified if true, force full refresh
-   */
-  // @VisibleForTesting
-  public void refreshUserList(boolean isAccountModified) {
-    ArrayList<String> usernames = new ArrayList<String>();
-    mAccountDb.getNames(usernames);
-
-    int userCount = usernames.size();
-
-    if (userCount > 0) {
-      boolean newListRequired = isAccountModified || mUsers.length != userCount;
-      if (newListRequired) {
-        mUsers = new PinInfo[userCount];
-      }
-
-      for (int i = 0; i < userCount; ++i) {
-        String user = usernames.get(i);
-        try {
-          computeAndDisplayPin(user, i, false);
-        } catch (OtpSourceException ignored) {}
-      }
-
-      if (newListRequired) {
-        // Make the list display the data from the newly created array of accounts
-        // This forces the list to scroll to top.
-        mUserAdapter = new PinListAdapter(this, R.layout.user_row, mUsers);
-        mUserList.setAdapter(mUserAdapter);
-      }
-
-      mUserAdapter.notifyDataSetChanged();
-
-      if (mUserList.getVisibility() != View.VISIBLE) {
-        mUserList.setVisibility(View.VISIBLE);
-        registerForContextMenu(mUserList);
-      }
-    } else {
-      mUsers = new PinInfo[0]; // clear any existing user PIN state
-      mUserList.setVisibility(View.GONE);
-    }
-
-    // Display the list of accounts if there are accounts, otherwise display a
-    // different layout explaining the user how this app works and providing the user with an easy
-    // way to add an account.
-    mContentNoAccounts.setVisibility((mUsers.length > 0) ? View.GONE : View.VISIBLE);
-    mContentAccountsPresent.setVisibility((mUsers.length > 0) ? View.VISIBLE : View.GONE);
-  }
-
-  /**
-   * Computes the PIN and saves it in mUsers. This currently runs in the UI
-   * thread so it should not take more than a second or so. If necessary, we can
-   * move the computation to a background thread.
-   *
-   * @param user the user email to display with the PIN
-   * @param position the index for the screen of this user and PIN
-   * @param computeHotp true if we should increment counter and display new hotp
-   */
-  public void computeAndDisplayPin(String user, int position,
-      boolean computeHotp) throws OtpSourceException {
-
-    PinInfo currentPin;
-    if (mUsers[position] != null) {
-      currentPin = mUsers[position]; // existing PinInfo, so we'll update it
-    } else {
-      currentPin = new PinInfo();
-      currentPin.pin = getString(R.string.empty_pin);
-      currentPin.hotpCodeGenerationAllowed = true;
-    }
-
-    OtpType type = mAccountDb.getType(user);
-    currentPin.isHotp = (type == OtpType.HOTP);
-
-    currentPin.user = user;
-
-    if (!currentPin.isHotp || computeHotp) {
-      // Always safe to recompute, because this code path is only
-      // reached if the account is:
-      // - Time-based, in which case getNextCode() does not change state.
-      // - Counter-based (HOTP) and computeHotp is true.
-      currentPin.pin = mOtpProvider.getNextCode(user);
-      currentPin.hotpCodeGenerationAllowed = true;
-    }
-
-    mUsers[position] = currentPin;
   }
 
   /**
@@ -606,7 +407,6 @@ Log.i(LOCAL_TAG, "-------");
   private void saveSecretAndRefreshUserList(String user, String secret,
       String originalUser, OtpType type, Integer counter) {
     if (saveSecret(this, user, secret, originalUser, type, counter)) {
-      refreshUserList(true);
     }
   }
 
@@ -645,100 +445,6 @@ Log.i(LOCAL_TAG, "-------");
     }
   }
 
-  /** Converts user list ordinal id to user email */
-  private String idToEmail(long id) {
-    return mUsers[(int) id].user;
-  }
-
-  @Override
-  public void onCreateContextMenu(ContextMenu menu, View v, ContextMenuInfo menuInfo) {
-    super.onCreateContextMenu(menu, v, menuInfo);
-    AdapterContextMenuInfo info = (AdapterContextMenuInfo) menuInfo;
-    String user = idToEmail(info.id);
-    OtpType type = mAccountDb.getType(user);
-    menu.setHeaderTitle(user);
-    menu.add(0, COPY_TO_CLIPBOARD_ID, 0, R.string.copy_to_clipboard);
-    // Option to display the check-code is only available for HOTP accounts.
-    if (type == OtpType.HOTP) {
-      menu.add(0, CHECK_KEY_VALUE_ID, 0, R.string.check_code_menu_item);
-    }
-    menu.add(0, RENAME_ID, 0, R.string.rename);
-    menu.add(0, REMOVE_ID, 0, R.string.context_menu_remove_account);
-  }
-
-  @Override
-  public boolean onContextItemSelected(MenuItem item) {
-    AdapterContextMenuInfo info = (AdapterContextMenuInfo) item.getMenuInfo();
-    Intent intent;
-    final String user = idToEmail(info.id); // final so listener can see value
-    switch (item.getItemId()) {
-      case COPY_TO_CLIPBOARD_ID:
-        ClipboardManager clipboard =
-          (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
-        clipboard.setText(mUsers[(int) info.id].pin);
-        return true;
-      case CHECK_KEY_VALUE_ID:
-        intent = new Intent(Intent.ACTION_VIEW);
-        intent.setClass(this, CheckCodeActivity.class);
-        intent.putExtra("user", user);
-        startActivity(intent);
-        return true;
-      case RENAME_ID:
-        final Context context = this; // final so listener can see value
-        final View frame = getLayoutInflater().inflate(R.layout.rename,
-            (ViewGroup) findViewById(R.id.rename_root));
-        final EditText nameEdit = (EditText) frame.findViewById(R.id.rename_edittext);
-        nameEdit.setText(user);
-        new AlertDialog.Builder(this)
-        .setTitle(String.format(getString(R.string.rename_message), user))
-        .setView(frame)
-        .setPositiveButton(R.string.submit,
-            this.getRenameClickListener(context, user, nameEdit))
-        .setNegativeButton(R.string.cancel, null)
-        .show();
-        return true;
-      case REMOVE_ID:
-        // Use a WebView to display the prompt because it contains non-trivial markup, such as list
-        View promptContentView =
-            getLayoutInflater().inflate(R.layout.remove_account_prompt, null, false);
-        WebView webView = (WebView) promptContentView.findViewById(R.id.web_view);
-        webView.setBackgroundColor(Color.TRANSPARENT);
-        // Make the WebView use the same font size as for the mEnterPinPrompt field
-        double pixelsPerDip =
-            TypedValue.applyDimension(
-                TypedValue.COMPLEX_UNIT_DIP, 10, getResources().getDisplayMetrics()) / 10d;
-        webView.getSettings().setDefaultFontSize(
-            (int) (mEnterPinPrompt.getTextSize() / pixelsPerDip));
-        Utilities.setWebViewHtml(
-            webView,
-            "<html><body style=\"background-color: transparent;\" text=\"white\">"
-                + getString(
-                    mAccountDb.isGoogleAccount(user)
-                        ? R.string.remove_google_account_dialog_message
-                        : R.string.remove_account_dialog_message)
-                + "</body></html>");
-
-        new AlertDialog.Builder(this)
-          .setTitle(getString(R.string.remove_account_dialog_title, user))
-          .setView(promptContentView)
-          .setIcon(android.R.drawable.ic_dialog_alert)
-          .setPositiveButton(R.string.remove_account_dialog_button_remove,
-              new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int whichButton) {
-                  mAccountDb.delete(user);
-                  refreshUserList(true);
-                }
-              }
-          )
-          .setNegativeButton(R.string.cancel, null)
-          .show();
-        return true;
-      default:
-        return super.onContextItemSelected(item);
-    }
-  }
-
   private DialogInterface.OnClickListener getRenameClickListener(final Context context,
       final String user, final EditText nameEdit) {
     return new DialogInterface.OnClickListener() {
@@ -753,6 +459,7 @@ Log.i(LOCAL_TAG, "-------");
                 mAccountDb.getSecret(user), user, mAccountDb.getType(user),
                 mAccountDb.getCounter(user));
           }
+          refreshUserList(true);
         }
       }
     };
@@ -1009,6 +716,78 @@ Log.i(LOCAL_TAG, "-------");
         .create();
   }
 
+  /** Converts user list ordinal id to user email */
+  private String idToEmail(long id) {
+    return mUsers[(int) id].user;
+  }
+
+  @Override
+  public void onCreateContextMenu(ContextMenu menu, View v, ContextMenuInfo menuInfo) {
+    super.onCreateContextMenu(menu, v, menuInfo);
+    AdapterContextMenuInfo info = (AdapterContextMenuInfo) menuInfo;
+    String user = idToEmail(info.id);
+    OtpType type = mAccountDb.getType(user);
+    menu.setHeaderTitle(user);
+    menu.add(0, RENAME_ID, 0, R.string.rename);
+    menu.add(0, REMOVE_ID, 0, R.string.context_menu_remove_account);
+  }
+
+  @Override
+  public boolean onContextItemSelected(MenuItem item) {
+    AdapterContextMenuInfo info = (AdapterContextMenuInfo) item.getMenuInfo();
+    Intent intent;
+    final String user = idToEmail(info.id); // final so listener can see value
+    switch (item.getItemId()) {
+      case RENAME_ID:
+        final Context context = this; // final so listener can see value
+        final View frame = getLayoutInflater().inflate(R.layout.rename,
+            (ViewGroup) findViewById(R.id.rename_root));
+        final EditText nameEdit = (EditText) frame.findViewById(R.id.rename_edittext);
+        nameEdit.setText(user);
+        new AlertDialog.Builder(this)
+        .setTitle(String.format(getString(R.string.rename_message), user))
+        .setView(frame)
+        .setPositiveButton(R.string.submit,
+            this.getRenameClickListener(context, user, nameEdit))
+        .setNegativeButton(R.string.cancel, null)
+        .show();
+        return true;
+      case REMOVE_ID:
+        // Use a WebView to display the prompt because it contains non-trivial markup, such as list
+        View promptContentView =
+            getLayoutInflater().inflate(R.layout.remove_account_prompt, null, false);
+        WebView webView = (WebView) promptContentView.findViewById(R.id.web_view);
+        webView.setBackgroundColor(Color.TRANSPARENT);
+        Utilities.setWebViewHtml(
+            webView,
+            "<html><body style=\"background-color: transparent;\" text=\"white\">"
+                + getString(
+                    mAccountDb.isGoogleAccount(user)
+                        ? R.string.remove_google_account_dialog_message
+                        : R.string.remove_account_dialog_message)
+                + "</body></html>");
+
+        new AlertDialog.Builder(this)
+          .setTitle(getString(R.string.remove_account_dialog_title, user))
+          .setView(promptContentView)
+          .setIcon(android.R.drawable.ic_dialog_alert)
+          .setPositiveButton(R.string.remove_account_dialog_button_remove,
+              new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int whichButton) {
+                  mAccountDb.delete(user);
+                  refreshUserList(true);
+                }
+              }
+          )
+          .setNegativeButton(R.string.cancel, null)
+          .show();
+        return true;
+      default:
+        return super.onContextItemSelected(item);
+    }
+  }
+
   /**
    * A tuple of user, OTP value, and type, that represents a particular user.
    *
@@ -1021,89 +800,6 @@ Log.i(LOCAL_TAG, "-------");
 
     /** HOTP only: Whether code generation is allowed for this account. */
     private boolean hotpCodeGenerationAllowed;
-  }
-
-
-  /** Scale to use for the text displaying the PIN numbers. */
-  private static final float PIN_TEXT_SCALEX_NORMAL = 1.0f;
-  /** Underscores are shown slightly smaller. */
-  private static final float PIN_TEXT_SCALEX_UNDERSCORE = 0.87f;
-
-  /**
-   * Listener for the Button that generates the next OTP value.
-   *
-   * @author adhintz@google.com (Drew Hintz)
-   */
-  private class NextOtpButtonListener implements OnClickListener {
-    private final Handler mHandler = new Handler();
-    private final PinInfo mAccount;
-
-    private NextOtpButtonListener(PinInfo account) {
-      mAccount = account;
-    }
-
-    @Override
-    public void onClick(View v) {
-      int position = findAccountPositionInList();
-      if (position == -1) {
-        throw new RuntimeException("Account not in list: " + mAccount);
-      }
-
-      try {
-        computeAndDisplayPin(mAccount.user, position, true);
-      } catch (OtpSourceException e) {
-        DependencyInjector.getOptionalFeatures().onAuthenticatorActivityGetNextOtpFailed(
-            AuthenticatorActivity.this, mAccount.user, e);
-        return;
-      }
-
-      final String pin = mAccount.pin;
-
-      // Temporarily disable code generation for this account
-      mAccount.hotpCodeGenerationAllowed = false;
-      mUserAdapter.notifyDataSetChanged();
-      // The delayed operation below will be invoked once code generation is yet again allowed for
-      // this account. The delay is in wall clock time (monotonically increasing) and is thus not
-      // susceptible to system time jumps.
-      mHandler.postDelayed(
-          new Runnable() {
-            @Override
-            public void run() {
-              mAccount.hotpCodeGenerationAllowed = true;
-              mUserAdapter.notifyDataSetChanged();
-            }
-          },
-          HOTP_MIN_TIME_INTERVAL_BETWEEN_CODES);
-      // The delayed operation below will hide this OTP to prevent the user from seeing this OTP
-      // long after it's been generated (and thus hopefully used).
-      mHandler.postDelayed(
-          new Runnable() {
-            @Override
-            public void run() {
-              if (!pin.equals(mAccount.pin)) {
-                return;
-              }
-              mAccount.pin = getString(R.string.empty_pin);
-              mUserAdapter.notifyDataSetChanged();
-            }
-          },
-          HOTP_DISPLAY_TIMEOUT);
-    }
-
-    /**
-     * Gets the position in the account list of the account this listener is associated with.
-     *
-     * @return {@code 0}-based position or {@code -1} if the account is not in the list.
-     */
-    private int findAccountPositionInList() {
-      for (int i = 0, len = mUsers.length; i < len; i++) {
-        if (mUsers[i] == mAccount) {
-          return i;
-        }
-      }
-
-      return -1;
-    }
   }
 
   /**
@@ -1131,44 +827,74 @@ Log.i(LOCAL_TAG, "-------");
        // Reuse an existing view
        row = convertView;
      } else {
-       // Create a new view
-       row = inflater.inflate(R.layout.user_row, null);
+       row = inflater.inflate(R.layout.item_user, null);
      }
-     TextView pinView = (TextView) row.findViewById(R.id.pin_value);
      TextView userView = (TextView) row.findViewById(R.id.current_user);
-     View buttonView = row.findViewById(R.id.next_otp);
-     CountdownIndicator countdownIndicator =
-         (CountdownIndicator) row.findViewById(R.id.countdown_icon);
-
-     if (currentPin.isHotp) {
-       buttonView.setVisibility(View.VISIBLE);
-       buttonView.setEnabled(currentPin.hotpCodeGenerationAllowed);
-       ((ViewGroup) row).setDescendantFocusability(
-           ViewGroup.FOCUS_BLOCK_DESCENDANTS); // makes long press work
-       NextOtpButtonListener clickListener = new NextOtpButtonListener(currentPin);
-       buttonView.setOnClickListener(clickListener);
-       row.setTag(clickListener);
-
-       countdownIndicator.setVisibility(View.GONE);
-     } else { // TOTP, so no button needed
-       buttonView.setVisibility(View.GONE);
-       buttonView.setOnClickListener(null);
-       row.setTag(null);
-
-       countdownIndicator.setVisibility(View.VISIBLE);
-       countdownIndicator.setPhase(mTotpCountdownPhase);
-     }
-
-     if (getString(R.string.empty_pin).equals(currentPin.pin)) {
-       pinView.setTextScaleX(PIN_TEXT_SCALEX_UNDERSCORE); // smaller gap between underscores
-     } else {
-       pinView.setTextScaleX(PIN_TEXT_SCALEX_NORMAL);
-     }
-     pinView.setText(currentPin.pin);
      userView.setText(currentPin.user);
+
+     TextView prefix = (TextView) row.findViewById(R.id.prefix);
+     prefix.setText(currentPin.user.substring(0, 1));
 
      return row;
     }
+  }
+
+  public void refreshUserList(boolean isAccountModified) {
+    ArrayList<String> usernames = new ArrayList<String>();
+    mAccountDb.getNames(usernames);
+
+    int userCount = usernames.size();
+
+    if (userCount > 0) {
+      boolean newListRequired = isAccountModified || mUsers.length != userCount;
+      if (newListRequired) {
+        mUsers = new PinInfo[userCount];
+      }
+
+      for (int i = 0; i < userCount; ++i) {
+        String user = usernames.get(i);
+        computeAndDisplayPin(user, i, false);
+      }
+
+      if (newListRequired) {
+        // Make the list display the data from the newly created array of accounts
+        // This forces the list to scroll to top.
+        mUserAdapter = new PinListAdapter(this, R.layout.user_row, mUsers);
+        mUserList.setAdapter(mUserAdapter);
+      }
+
+      mUserAdapter.notifyDataSetChanged();
+      if (mUserList.getVisibility() != View.VISIBLE) {
+        mUserList.setVisibility(View.VISIBLE);
+        registerForContextMenu(mUserList);
+      }
+    } else {
+      mUsers = new PinInfo[0]; // clear any existing user PIN state
+      mUserList.setVisibility(View.GONE);
+    }
+
+    // Display the list of accounts if there are accounts, otherwise display a
+    // different layout explaining the user how this app works and providing the user with an easy
+    // way to add an account.
+    mContentNoAccounts.setVisibility((mUsers.length > 0) ? View.GONE : View.VISIBLE);
+    mContentAccountsPresent.setVisibility((mUsers.length > 0) ? View.VISIBLE : View.GONE);
+  }
+
+  public void computeAndDisplayPin(String user, int position, boolean computeHotp) {
+    PinInfo currentPin;
+    if (mUsers[position] != null) {
+        currentPin = mUsers[position]; // existing PinInfo, so we'll update it
+    } else {
+        currentPin = new PinInfo();
+        currentPin.pin = getString(R.string.empty_pin);
+        currentPin.hotpCodeGenerationAllowed = true;
+    }
+
+    OtpType type = mAccountDb.getType(user);
+    currentPin.isHotp = (type == OtpType.HOTP);
+    currentPin.user = user;
+
+    mUsers[position] = currentPin;
   }
 
   private void importDataFromOldAppIfNecessary() {
@@ -1192,8 +918,6 @@ Log.i(LOCAL_TAG, "-------");
         if (isFinishing()) {
           return;
         }
-
-        refreshUserList(true);
 
         DependencyInjector.getOptionalFeatures().onDataImportedFromOldApp(
             AuthenticatorActivity.this);
