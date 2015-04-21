@@ -18,6 +18,7 @@
     <group android:id="@+id/normal_grp">
         <item
             android:id="@+id/add_account"
+            android:showAsAction="always"
             android:icon="@android:drawable/ic_menu_add"
             android:title="@string/add_account_menu_item" />
         <item
