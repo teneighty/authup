@@ -21,10 +21,10 @@
   <string name="app_package_name" translatable="false">com.google.android.apps.authenticator2</string>
 
   <!-- Name of the application -->
-  <string name="app_name">Authd</string>
+  <string name="app_name">Auth-Up</string>
 
   <!-- Shortened version of the application name, without Google branding -->
-  <string name="app_name_short">Authd</string>
+  <string name="app_name_short">Auth-Up</string>
 
   <!-- Title displayed at the top when adding new OTP account manually -->
   <string name="enter_key_title">Manual account entry</string>
