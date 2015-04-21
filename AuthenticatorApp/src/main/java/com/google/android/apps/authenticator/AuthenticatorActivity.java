@@ -820,7 +820,7 @@ public class AuthenticatorActivity extends TestableActivity {
      Bitmap bitmap = null;
      if (currentPin.providerType != null) {
         try {
-        bitmap = getBitmapFromAssets(AuthenticatorActivity.this, currentPin.providerType + "/menu_item.png");
+        bitmap = getBitmapFromAssets(AuthenticatorActivity.this, currentPin.providerType + "/menu_item_v2.png");
         } catch (java.io.IOException e) {
            Log.e(LOCAL_TAG, "", e);
         }
