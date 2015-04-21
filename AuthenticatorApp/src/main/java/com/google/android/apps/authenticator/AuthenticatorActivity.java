@@ -32,6 +32,9 @@ import android.content.Context;
 import android.content.DialogInterface.OnDismissListener;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.res.AssetManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
@@ -59,10 +62,12 @@ import android.widget.AdapterView.OnItemLongClickListener;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.InputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 
@@ -772,6 +777,7 @@ public class AuthenticatorActivity extends TestableActivity {
   private static class PinInfo {
     private String pin; // calculated OTP, or a placeholder if not calculated
     private String user;
+    private String providerType;
     private boolean isHotp = false; // used to see if button needs to be displayed
 
     /** HOTP only: Whether code generation is allowed for this account. */
@@ -809,10 +815,34 @@ public class AuthenticatorActivity extends TestableActivity {
      userView.setText(currentPin.user);
 
      TextView prefix = (TextView) row.findViewById(R.id.prefix);
-     prefix.setText(currentPin.user.substring(0, 1));
 
+     ImageView image = (ImageView) row.findViewById(R.id.image);
+     Bitmap bitmap = null;
+     if (currentPin.providerType != null) {
+        try {
+        bitmap = getBitmapFromAssets(AuthenticatorActivity.this, currentPin.providerType + "/menu_item.png");
+        } catch (java.io.IOException e) {
+           Log.e(LOCAL_TAG, "", e);
+        }
+     }
+     if (null == bitmap) {
+        prefix.setText(currentPin.user.substring(0, 1));
+        prefix.setVisibility(View.VISIBLE);
+        image.setVisibility(View.GONE);
+     } else {
+        image.setImageBitmap(bitmap);
+        image.setVisibility(View.VISIBLE);
+        prefix.setVisibility(View.GONE);
+     }
      return row;
     }
+  }
+
+  public static Bitmap getBitmapFromAssets(Context context, String fileName) throws java.io.IOException {
+    AssetManager assetManager = context.getAssets();
+    InputStream is = assetManager.open(fileName);
+    Bitmap bitmap = BitmapFactory.decodeStream(is);
+    return bitmap;
   }
 
   public void refreshUserList(boolean isAccountModified) {
@@ -868,6 +898,7 @@ public class AuthenticatorActivity extends TestableActivity {
     OtpType type = mAccountDb.getType(user);
     currentPin.isHotp = (type == OtpType.HOTP);
     currentPin.user = user;
+    currentPin.providerType = mAccountDb.getProviderType(user);
 
     mUsers[position] = currentPin;
   }

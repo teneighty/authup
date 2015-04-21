@@ -56,6 +56,7 @@ public class TokenEditActivity extends TestableActivity {
   private AccountDb mAccountDb;
   private OtpSource mOtpProvider;
   private String mUser;
+  private EditText mProviderTypeEdit;
   private EditText mNameEdit;
   private TextView mType;
   private TextView mDoneButton;
@@ -83,6 +84,10 @@ public class TokenEditActivity extends TestableActivity {
     mNameEdit = (EditText) findViewById(R.id.token_name);
     mNameEdit.setText(mUser);
 
+    String providerType = mAccountDb.getProviderType(mUser);
+    mProviderTypeEdit = (EditText) findViewById(R.id.provider_type);
+    mProviderTypeEdit.setText(providerType == null ? "" : providerType);
+
     OtpType otpType = mAccountDb.getType(mUser);
     mType = (TextView) findViewById(R.id.token_type);
     mType.setText(otpType == OtpType.TOTP ? "TOPT" : "HOPT");
@@ -91,9 +96,10 @@ public class TokenEditActivity extends TestableActivity {
     mDoneButton.setOnClickListener(new View.OnClickListener() {
       public void onClick(View view) {
         String newName = mNameEdit.getText().toString();
-        AuthenticatorActivity.saveSecret(TokenEditActivity.this, newName,
+        String newProvType = mProviderTypeEdit.getText().toString();
+        mAccountDb.update(newName,
             mAccountDb.getSecret(mUser), mUser, mAccountDb.getType(mUser),
-            mAccountDb.getCounter(mUser));
+            mAccountDb.getCounter(mUser), newProvType);
         TokenEditActivity.this.finish();
       }
     });
@@ -119,10 +125,7 @@ public class TokenEditActivity extends TestableActivity {
         Utilities.setWebViewHtml(
             webView,
             "<html><body style=\"background-color: transparent;\" text=\"white\">"
-                + getString(
-                    mAccountDb.isGoogleAccount(mUser)
-                        ? R.string.remove_google_account_dialog_message
-                        : R.string.remove_account_dialog_message)
+                + getString(R.string.remove_account_dialog_message)
                 + "</body></html>");
 
         new AlertDialog.Builder(this)

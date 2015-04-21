@@ -54,6 +54,7 @@ public class AccountDb {
   private static final String SECRET_COLUMN = "secret";
   private static final String COUNTER_COLUMN = "counter";
   private static final String TYPE_COLUMN = "type";
+  private static final String PROVIDER_TYPE = "provider_type";
   // @VisibleForTesting
   static final String PROVIDER_COLUMN = "provider";
   // @VisibleForTesting
@@ -101,9 +102,10 @@ public class AccountDb {
     // Create the table if it doesn't exist
     mDatabase.execSQL(String.format(
         "CREATE TABLE IF NOT EXISTS %s" +
-        " (%s INTEGER PRIMARY KEY, %s TEXT NOT NULL, %s TEXT NOT NULL, " +
+        " (%s INTEGER PRIMARY KEY, %s TEXT NOT NULL, %s TEXT NOT NULL, %s TEXT, " +
         " %s INTEGER DEFAULT %s, %s INTEGER, %s INTEGER DEFAULT %s)",
-        TABLE_NAME, ID_COLUMN, EMAIL_COLUMN, SECRET_COLUMN, COUNTER_COLUMN,
+        TABLE_NAME, ID_COLUMN, EMAIL_COLUMN, SECRET_COLUMN, PROVIDER_TYPE,
+        COUNTER_COLUMN,
         DEFAULT_HOTP_COUNTER, TYPE_COLUMN,
         PROVIDER_COLUMN, PROVIDER_UNKNOWN));
 
@@ -113,6 +115,11 @@ public class AccountDb {
       mDatabase.execSQL(String.format(
           "ALTER TABLE %s ADD COLUMN %s INTEGER DEFAULT %s",
           TABLE_NAME, PROVIDER_COLUMN, PROVIDER_UNKNOWN));
+    }
+    if (!tableColumnNames.contains(PROVIDER_TYPE.toLowerCase(Locale.US))) {
+      mDatabase.execSQL(String.format(
+          "ALTER TABLE %s ADD COLUMN %s TEXT",
+          TABLE_NAME, PROVIDER_TYPE));
     }
   }
 
@@ -222,6 +229,19 @@ public class AccountDb {
     }
   }
 
+  public String getProviderType(String email) {
+    Cursor cursor = getAccount(email);
+    try {
+      if (!cursorIsEmpty(cursor)) {
+        cursor.moveToFirst();
+        return cursor.getString(cursor.getColumnIndex(PROVIDER_TYPE));
+      }
+    } finally {
+      tryCloseCursor(cursor);
+    }
+    return null;
+  }
+
   public String getSecret(String email) {
     Cursor cursor = getAccount(email);
     try {
@@ -305,28 +325,6 @@ public class AccountDb {
     mDatabase.update(TABLE_NAME, values, whereClause(email), null);
   }
 
-  public boolean isGoogleAccount(String email) {
-    Cursor cursor = getAccount(email);
-    try {
-      if (!cursorIsEmpty(cursor)) {
-        cursor.moveToFirst();
-        if (cursor.getInt(cursor.getColumnIndex(PROVIDER_COLUMN)) == PROVIDER_GOOGLE) {
-          // The account is marked as source: Google
-          return true;
-        }
-        // The account is from an unknown source. Could be a Google account added by scanning
-        // a QR code or by manually entering a key
-        String emailLowerCase = email.toLowerCase(Locale.US);
-        return(emailLowerCase.endsWith("@gmail.com"))
-            || (emailLowerCase.endsWith("@google.com"))
-            || (email.equals(GOOGLE_CORP_ACCOUNT_NAME));
-      }
-    } finally {
-      tryCloseCursor(cursor);
-    }
-    return false;
-  }
-
   /**
    * Finds the Google corp account in this database.
    *
@@ -368,17 +366,13 @@ public class AccountDb {
    *        the previous value (or use a default if adding a key).
    */
   public void update(String email, String secret, String oldEmail,
-      OtpType type, Integer counter, Boolean googleAccount) {
+      OtpType type, Integer counter, String providerType) {
     ContentValues values = new ContentValues();
     values.put(EMAIL_COLUMN, email);
     values.put(SECRET_COLUMN, secret);
     values.put(TYPE_COLUMN, type.ordinal());
     values.put(COUNTER_COLUMN, counter);
-    if (googleAccount != null) {
-      values.put(
-          PROVIDER_COLUMN,
-          (googleAccount.booleanValue()) ? PROVIDER_GOOGLE : PROVIDER_UNKNOWN);
-    }
+    values.put(PROVIDER_TYPE, providerType);
     int updated = mDatabase.update(TABLE_NAME, values,
                                   whereClause(oldEmail), null);
     if (updated == 0) {

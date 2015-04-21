@@ -20,9 +20,16 @@
     android:layout_height="wrap_content">
 
     <TextView android:id="@+id/prefix"
-        android:layout_width="75dp"
-        android:layout_height="75dp"
-        android:textSize="50sp"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:textSize="30sp"
+        android:gravity="center"
+        android:layout_margin="10dip"
+        />
+
+    <ImageView android:id="@+id/image"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
         android:gravity="center"
         android:layout_margin="10dip"
         />

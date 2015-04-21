@@ -33,6 +33,7 @@ import android.content.Context;
 import android.content.DialogInterface.OnDismissListener;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
@@ -57,6 +58,7 @@ import android.widget.AdapterView.OnItemClickListener;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -76,6 +78,7 @@ public class TokenViewActivity extends TestableActivity {
   private OtpSource mOtpProvider;
   private TextView mToken;
   private TextView mTimeLeft;
+  private ImageView mImage;
   private CountdownIndicator mCountdownIndicator;
   private String mUser;
   private OtpType mType;
@@ -137,7 +140,27 @@ public class TokenViewActivity extends TestableActivity {
     mTimeLeft = (TextView) findViewById(R.id.time_left);
     mCountdownIndicator = (CountdownIndicator) findViewById(R.id.countdown_icon);
 
+    mImage = (ImageView) findViewById(R.id.image);
+    mImage.setVisibility(View.GONE);
+    setLogo();
+
     refreshVerificationCode();
+  }
+
+  private void setLogo() {
+    String providerType = mAccountDb.getProviderType(mUser);
+    Bitmap bitmap = null;
+    if (providerType != null) {
+      try {
+       bitmap = AuthenticatorActivity.getBitmapFromAssets(this, providerType + "/logo.png");
+      } catch (java.io.IOException e) {
+         Log.e(TAG, "", e);
+      }
+    }
+    if (null != bitmap) {
+      mImage.setImageBitmap(bitmap);
+      mImage.setVisibility(View.VISIBLE);
+    }
   }
 
   @Override
