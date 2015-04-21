@@ -29,8 +29,8 @@ import android.app.Dialog;
 import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.DialogInterface.OnDismissListener;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
@@ -41,19 +41,22 @@ import android.text.ClipboardManager;
 import android.text.Html;
 import android.util.Log;
 import android.util.TypedValue;
-import android.view.ContextMenu;
+import android.view.ActionMode;
 import android.view.ContextMenu.ContextMenuInfo;
+import android.view.ContextMenu;
 import android.view.LayoutInflater;
 import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.MenuItem;
-import android.view.View;
 import android.view.View.OnClickListener;
+import android.view.View;
 import android.view.ViewGroup;
 import android.view.accessibility.AccessibilityEvent;
 import android.webkit.WebView;
-import android.widget.AdapterView;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 import android.widget.AdapterView.OnItemClickListener;
+import android.widget.AdapterView.OnItemLongClickListener;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ListView;
@@ -112,6 +115,7 @@ public class AuthenticatorActivity extends TestableActivity {
   private ListView mUserList;
   private PinListAdapter mUserAdapter;
   private PinInfo[] mUsers = {};
+  private PinInfo mPinSelected;
   private AccountDb mAccountDb;
   private OtpSource mOtpProvider;
 
@@ -155,6 +159,7 @@ public class AuthenticatorActivity extends TestableActivity {
    * "save key" Intent.
    */
   private boolean mSaveKeyIntentConfirmationInProgress;
+  private ActionMode mActionMode;
 
   private static final String OTP_SCHEME = "otpauth";
   private static final String TOTP = "totp"; // time-based
@@ -236,6 +241,18 @@ public class AuthenticatorActivity extends TestableActivity {
           intent.putExtra("user", pin.user);
           startActivity(intent);
         }
+    });
+    mUserList.setOnItemLongClickListener(new OnItemLongClickListener() {
+      @Override
+      public boolean onItemLongClick(AdapterView<?> parent, View view,
+                                  int position, long id) {
+        if (mActionMode != null) {
+            return false;
+        }
+        mPinSelected = (PinInfo) parent.getItemAtPosition(position);
+        mActionMode = AuthenticatorActivity.this.startActionMode(mActionModeCallback);
+        return true;
+      }
     });
 
     if (savedInstanceState == null) {
@@ -701,39 +718,51 @@ public class AuthenticatorActivity extends TestableActivity {
     return mUsers[(int) id].user;
   }
 
-  @Override
-  public void onCreateContextMenu(ContextMenu menu, View v, ContextMenuInfo menuInfo) {
-    super.onCreateContextMenu(menu, v, menuInfo);
-    AdapterContextMenuInfo info = (AdapterContextMenuInfo) menuInfo;
-    String user = idToEmail(info.id);
-    OtpType type = mAccountDb.getType(user);
-    menu.setHeaderTitle(user);
-    menu.add(0, EDIT_ID, 0, R.string.edit);
-    menu.add(0, EXPORT_ID, 0, R.string.export);
-  }
+  private ActionMode.Callback mActionModeCallback = new ActionMode.Callback() {
 
-  @Override
-  public boolean onContextItemSelected(MenuItem item) {
-    Intent intent;
-    AdapterContextMenuInfo info = (AdapterContextMenuInfo) item.getMenuInfo();
-    final String user = idToEmail(info.id); // final so listener can see value
-    switch (item.getItemId()) {
-      case EDIT_ID:
-        intent = new Intent(Intent.ACTION_EDIT);
-        intent.setClass(AuthenticatorActivity.this, TokenEditActivity.class);
-        intent.putExtra("user", user);
-        startActivity(intent);
-        return true;
-      case EXPORT_ID:
-        intent = new Intent(Intent.ACTION_EDIT);
-        intent.setClass(AuthenticatorActivity.this, SecretExportActivity.class);
-        intent.putExtra("user", user);
-        startActivity(intent);
-        return true;
-      default:
-        return super.onContextItemSelected(item);
+    @Override
+    public boolean onCreateActionMode(ActionMode mode, Menu menu) {
+      MenuInflater inflater = mode.getMenuInflater();
+      inflater.inflate(R.menu.context_token, menu);
+      return true;
     }
-  }
+
+    @Override
+    public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
+      return false;
+    }
+
+    @Override
+    public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
+      Intent intent;
+      PinInfo user = mPinSelected;
+      switch (item.getItemId()) {
+        case R.id.token_edit:
+          intent = new Intent(Intent.ACTION_EDIT);
+          intent.setClass(AuthenticatorActivity.this, TokenEditActivity.class);
+          intent.putExtra("user", user.user);
+          startActivity(intent);
+          mode.finish();
+          return true;
+        case R.id.token_export:
+          intent = new Intent(Intent.ACTION_EDIT);
+          intent.setClass(AuthenticatorActivity.this, SecretExportActivity.class);
+          intent.putExtra("user", user.user);
+          startActivity(intent);
+          mode.finish();
+          return true;
+        default:
+          return false;
+      }
+    }
+
+    // Called when the user exits the action mode
+    @Override
+    public void onDestroyActionMode(ActionMode mode) {
+        mActionMode = null;
+        mPinSelected = null;
+    }
+  };
 
   /**
    * A tuple of user, OTP value, and type, that represents a particular user.
@@ -813,7 +842,6 @@ public class AuthenticatorActivity extends TestableActivity {
       mUserAdapter.notifyDataSetChanged();
       if (mUserList.getVisibility() != View.VISIBLE) {
         mUserList.setVisibility(View.VISIBLE);
-        registerForContextMenu(mUserList);
       }
     } else {
       mUsers = new PinInfo[0]; // clear any existing user PIN state
