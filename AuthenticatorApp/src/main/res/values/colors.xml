@@ -16,4 +16,5 @@
 
 <resources>
   <color name="countdown_indicator">#ff71ca00</color>
+  <color name="actionbar_background">#ff336699</color>
 </resources>
