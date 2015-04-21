@@ -30,14 +30,6 @@
             android:layout_height="wrap_content"
             android:layout_width="match_parent"
             android:layout_alignParentTop="true"
-            android:layout_alignParentLeft="true"
-            android:textAppearance="?android:attr/textAppearanceLarge"
-            android:id="@+id/token_title" />
-
-        <TextView
-            android:layout_height="wrap_content"
-            android:layout_width="match_parent"
-            android:layout_below="@id/token_title"
             android:textSize="80sp"
             android:layout_gravity="center"
             android:id="@+id/token" />

@@ -65,6 +65,7 @@ public class SecretExportActivity extends TestableActivity {
 
     final ActionBar actionBar = getActionBar();
     actionBar.setHomeButtonEnabled(true);
+    actionBar.setDisplayHomeAsUpEnabled(true);
 
     mAccountDb = DependencyInjector.getAccountDb();
 
@@ -88,6 +89,16 @@ public class SecretExportActivity extends TestableActivity {
     mImageView = (ImageView) findViewById(R.id.qrcode);
     if (bitmap != null) {
       mImageView.setImageBitmap(bitmap);
+    }
+  }
+
+  public boolean onOptionsItemSelected(MenuItem item) {
+    switch (item.getItemId()) {
+      case android.R.id.home:
+        this.finish();
+        return true;
+      default:
+        return super.onOptionsItemSelected(item);
     }
   }
 }

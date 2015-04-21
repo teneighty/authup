@@ -23,14 +23,15 @@ import com.google.android.apps.authenticator.testability.DependencyInjector;
 import com.google.android.apps.authenticator.testability.TestableActivity;
 import com.google.android.apps.authenticator2.R;
 
+import android.app.ActionBar;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.DialogInterface.OnDismissListener;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
@@ -41,19 +42,19 @@ import android.text.ClipboardManager;
 import android.text.Html;
 import android.util.Log;
 import android.util.TypedValue;
-import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
+import android.view.ContextMenu;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
 import android.view.View.OnClickListener;
+import android.view.View;
 import android.view.ViewGroup;
 import android.view.accessibility.AccessibilityEvent;
 import android.webkit.WebView;
-import android.widget.AdapterView;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 import android.widget.AdapterView.OnItemClickListener;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ListView;
@@ -73,7 +74,6 @@ public class TokenViewActivity extends TestableActivity {
   private double mTotpCountdownPhase;
   private AccountDb mAccountDb;
   private OtpSource mOtpProvider;
-  private TextView mTokenTitle;
   private TextView mToken;
   private TextView mTimeLeft;
   private CountdownIndicator mCountdownIndicator;
@@ -112,12 +112,15 @@ public class TokenViewActivity extends TestableActivity {
   public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
 
+    final ActionBar actionBar = getActionBar();
+    actionBar.setHomeButtonEnabled(true);
+    actionBar.setDisplayHomeAsUpEnabled(true);
+
     mAccountDb = DependencyInjector.getAccountDb();
     mOtpProvider = DependencyInjector.getOtpProvider();
     mTotpCounter = mOtpProvider.getTotpCounter();
     mTotpClock = mOtpProvider.getTotpClock();
 
-    setTitle(R.string.app_name);
     setContentView(R.layout.act_token);
 
     Intent intent = getIntent();
@@ -127,10 +130,8 @@ public class TokenViewActivity extends TestableActivity {
       finish();
       return;
     }
+    setTitle(mUser);
     mType = mAccountDb.getType(mUser);
-
-    mTokenTitle = (TextView) findViewById(R.id.token_title);
-    mTokenTitle.setText(mUser);
 
     mToken = (TextView) findViewById(R.id.token);
     mTimeLeft = (TextView) findViewById(R.id.time_left);
@@ -148,6 +149,9 @@ public class TokenViewActivity extends TestableActivity {
   @Override
   public boolean onMenuItemSelected(int featureId, MenuItem item) {
     switch (item.getItemId()) {
+      case android.R.id.home:
+        this.finish();
+        return true;
       case R.id.token_copy:
         copyToClipboard();
         return true;

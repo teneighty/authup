@@ -66,6 +66,7 @@ public class TokenEditActivity extends TestableActivity {
 
     final ActionBar actionBar = getActionBar();
     actionBar.setHomeButtonEnabled(true);
+    actionBar.setDisplayHomeAsUpEnabled(true);
 
     mAccountDb = DependencyInjector.getAccountDb();
 
@@ -99,17 +100,6 @@ public class TokenEditActivity extends TestableActivity {
   }
 
   @Override
-  public boolean onOptionsItemSelected(MenuItem item) {
-    switch (item.getItemId()) {
-      case android.R.id.home:
-        this.finish();
-        return true;
-      default:
-        return super.onOptionsItemSelected(item);
-    }
-  }
-
-  @Override
   public boolean onCreateOptionsMenu(Menu menu) {
     getMenuInflater().inflate(R.menu.token_edit, menu);
     return true;
@@ -118,6 +108,9 @@ public class TokenEditActivity extends TestableActivity {
   @Override
   public boolean onMenuItemSelected(int featureId, MenuItem item) {
     switch (item.getItemId()) {
+      case android.R.id.home:
+        this.finish();
+        return true;
       case R.id.token_remove:
         View promptContentView =
             getLayoutInflater().inflate(R.layout.remove_account_prompt, null, false);
