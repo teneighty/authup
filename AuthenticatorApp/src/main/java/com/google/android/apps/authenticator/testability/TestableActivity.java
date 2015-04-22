@@ -16,6 +16,8 @@
 
 package com.google.android.apps.authenticator.testability;
 
+import com.google.android.apps.authenticator2.R;
+
 import android.app.Activity;
 import android.content.Intent;
 
@@ -34,6 +36,13 @@ public class TestableActivity extends Activity {
     }
 
     super.startActivity(intent);
+    super.overridePendingTransition(R.anim.slide_in_right, R.anim.fade_out_exit);
+  }
+
+  @Override
+  public void finish() {
+    super.finish();
+    super.overridePendingTransition(R.anim.fade_in_enter, R.anim.slide_out_right);
   }
 
   @Override

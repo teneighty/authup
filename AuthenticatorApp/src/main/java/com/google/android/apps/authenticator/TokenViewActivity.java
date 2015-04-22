@@ -130,7 +130,6 @@ public class TokenViewActivity extends TestableActivity {
     Intent intent = getIntent();
     mUser = intent.getStringExtra("user");
     if (null == mUser) {
-      // TODO: error error error
       finish();
       return;
     }
@@ -167,7 +166,7 @@ public class TokenViewActivity extends TestableActivity {
   public boolean onMenuItemSelected(int featureId, MenuItem item) {
     switch (item.getItemId()) {
       case android.R.id.home:
-        this.finish();
+        finish();
         return true;
       case R.id.token_copy:
         copyToClipboard();

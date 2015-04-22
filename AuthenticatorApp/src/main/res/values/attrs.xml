@@ -30,4 +30,6 @@
     <!-- Color. -->
     <attr name="color" format="reference|color" />
   </declare-styleable>
+
+  <integer name="config_shortTime">200</integer>
 </resources>
