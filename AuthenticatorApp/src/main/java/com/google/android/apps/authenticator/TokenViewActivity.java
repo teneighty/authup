@@ -152,7 +152,7 @@ public class TokenViewActivity extends TestableActivity {
     Bitmap bitmap = null;
     if (providerType != null) {
       try {
-       bitmap = AuthenticatorActivity.getBitmapFromAssets(this, providerType + "/logo.png");
+        bitmap = AuthenticatorActivity.getBitmapFromAssets(this, providerType + "/logo.png");
       } catch (java.io.IOException e) {
          Log.e(TAG, "", e);
       }

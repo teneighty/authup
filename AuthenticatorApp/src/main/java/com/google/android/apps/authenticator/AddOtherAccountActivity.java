@@ -16,11 +16,13 @@
 
 package com.google.android.apps.authenticator;
 
-import com.google.android.apps.authenticator.wizard.WizardPageActivity;
+import com.google.android.apps.authenticator.testability.TestableActivity;
 import com.google.android.apps.authenticator2.R;
 
+import android.app.ActionBar;
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.MenuItem;
 import android.view.View;
 
 import java.io.Serializable;
@@ -31,13 +33,16 @@ import java.io.Serializable;
  *
  * @author klyubin@google.com (Alex Klyubin)
  */
-public class AddOtherAccountActivity extends WizardPageActivity<Serializable> {
+public class AddOtherAccountActivity extends TestableActivity {
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
+    setContentView(R.layout.add_other_account);
 
-    setPageContentView(R.layout.add_other_account);
+    final ActionBar actionBar = getActionBar();
+    actionBar.setHomeButtonEnabled(true);
+    actionBar.setDisplayHomeAsUpEnabled(true);
 
     findViewById(R.id.scan_barcode).setOnClickListener(new View.OnClickListener() {
       @Override
@@ -51,8 +56,17 @@ public class AddOtherAccountActivity extends WizardPageActivity<Serializable> {
         manuallyEnterAccountDetails();
       }
     });
+  }
 
-    mRightButton.setVisibility(View.INVISIBLE);
+  @Override
+  public boolean onOptionsItemSelected(MenuItem item) {
+    switch (item.getItemId()) {
+      case android.R.id.home:
+        finish();
+        return true;
+      default:
+        return super.onOptionsItemSelected(item);
+    }
   }
 
   private void manuallyEnterAccountDetails() {

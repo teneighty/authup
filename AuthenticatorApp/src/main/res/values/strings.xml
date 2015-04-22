@@ -33,6 +33,10 @@
        is entering on the page. -->
   <string name="enter_key_page_add_button">Add</string>
 
+  <!-- Button on the Manual Account Entry page to add the account the details of which the user
+       is entering on the page. -->
+  <string name="enter_key_page_done_button">Done</string>
+
   <!-- Label for a button on the main screen: add a new OTP account -->
   <string name="button_add_account">Add an account</string>
 

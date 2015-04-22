@@ -18,13 +18,20 @@ package com.google.android.apps.authenticator;
 
 import com.google.android.apps.authenticator.AccountDb.OtpType;
 import com.google.android.apps.authenticator.Base32String.DecodingException;
+import com.google.android.apps.authenticator.testability.DependencyInjector;
+import com.google.android.apps.authenticator.testability.TestableActivity;
 import com.google.android.apps.authenticator.wizard.WizardPageActivity;
 import com.google.android.apps.authenticator2.R;
 
+import android.app.ActionBar;
+import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.view.MenuItem;
+import android.view.View;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Spinner;
 
@@ -36,11 +43,16 @@ import java.io.Serializable;
  *
  * @author sweis@google.com (Steve Weis)
  */
-public class EnterKeyActivity extends WizardPageActivity<Serializable> implements TextWatcher {
+public class EnterKeyActivity extends TestableActivity implements TextWatcher {
   private static final int MIN_KEY_BYTES = 10;
   private EditText mKeyEntryField;
   private EditText mAccountName;
+  private EditText mProviderTypeEdit;
   private Spinner mType;
+
+  private Button mDone;
+  private AccountDb mAccountDb;
+  private String mUser;
 
   /**
    * Called when the activity is first created
@@ -48,12 +60,39 @@ public class EnterKeyActivity extends WizardPageActivity<Serializable> implement
   @Override
   public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
-    setPageContentView(R.layout.enter_key);
+    setContentView(R.layout.enter_key);
+
+    final ActionBar actionBar = getActionBar();
+    actionBar.setHomeButtonEnabled(true);
+    actionBar.setDisplayHomeAsUpEnabled(true);
+
+    mAccountDb = DependencyInjector.getAccountDb();
 
     // Find all the views on the page
     mKeyEntryField = (EditText) findViewById(R.id.key_value);
     mAccountName = (EditText) findViewById(R.id.account_name);
     mType = (Spinner) findViewById(R.id.type_choice);
+    mProviderTypeEdit = (EditText) findViewById(R.id.provider_type);
+    mDone = (Button) findViewById(R.id.done_button);
+    mDone.setOnClickListener(new View.OnClickListener() {
+      public void onClick(View v) {
+        // TODO(cemp): This depends on the OtpType enumeration to correspond
+        // to array indices for the dropdown with different OTP modes.
+        OtpType mode = mType.getSelectedItemPosition() == OtpType.TOTP.value ?
+                      OtpType.TOTP :
+                      OtpType.HOTP;
+        if (validateKeyAndUpdateStatus(true)) {
+          mAccountDb.update(
+              mAccountName.getText().toString(),
+              getEnteredKey(),
+              mUser,
+              mode,
+              AccountDb.DEFAULT_HOTP_COUNTER,
+              mProviderTypeEdit.getText().toString());
+          finish();
+        }
+      }
+    });
 
     ArrayAdapter<CharSequence> types = ArrayAdapter.createFromResource(this,
         R.array.type, android.R.layout.simple_spinner_item);
@@ -63,7 +102,26 @@ public class EnterKeyActivity extends WizardPageActivity<Serializable> implement
     // Set listeners
     mKeyEntryField.addTextChangedListener(this);
 
-    mRightButton.setText(R.string.enter_key_page_add_button);
+    Intent intent = getIntent();
+    mUser = intent.getStringExtra("user");
+    if (null != mUser) {
+      mAccountName.setText(mUser);
+      mKeyEntryField.setText(mAccountDb.getSecret(mUser));
+      // mType.setSelectedItemPosition();
+      String providerType = mAccountDb.getProviderType(mUser);
+      mProviderTypeEdit.setText(providerType == null ? "" : providerType);
+    }
+  }
+
+  @Override
+  public boolean onOptionsItemSelected(MenuItem item) {
+    switch (item.getItemId()) {
+      case android.R.id.home:
+        finish();
+        return true;
+      default:
+        return super.onOptionsItemSelected(item);
+    }
   }
 
   /*
@@ -94,24 +152,6 @@ public class EnterKeyActivity extends WizardPageActivity<Serializable> implement
     } catch (DecodingException e) {
       mKeyEntryField.setError(getString(R.string.enter_key_illegal_char));
       return false;
-    }
-  }
-
-  @Override
-  protected void onRightButtonPressed() {
-    // TODO(cemp): This depends on the OtpType enumeration to correspond
-    // to array indices for the dropdown with different OTP modes.
-    OtpType mode = mType.getSelectedItemPosition() == OtpType.TOTP.value ?
-                   OtpType.TOTP :
-                   OtpType.HOTP;
-    if (validateKeyAndUpdateStatus(true)) {
-      AuthenticatorActivity.saveSecret(this,
-          mAccountName.getText().toString(),
-          getEnteredKey(),
-          null,
-          mode,
-          AccountDb.DEFAULT_HOTP_COUNTER);
-      exitWizard();
     }
   }
 

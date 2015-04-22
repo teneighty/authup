@@ -729,6 +729,9 @@ public class AuthenticatorActivity extends TestableActivity {
     public boolean onCreateActionMode(ActionMode mode, Menu menu) {
       MenuInflater inflater = mode.getMenuInflater();
       inflater.inflate(R.menu.context_token, menu);
+      if (mPinSelected != null) {
+        mode.setTitle(mPinSelected.user);
+      }
       return true;
     }
 
@@ -744,7 +747,7 @@ public class AuthenticatorActivity extends TestableActivity {
       switch (item.getItemId()) {
         case R.id.token_edit:
           intent = new Intent(Intent.ACTION_EDIT);
-          intent.setClass(AuthenticatorActivity.this, TokenEditActivity.class);
+          intent.setClass(AuthenticatorActivity.this, EnterKeyActivity.class);
           intent.putExtra("user", user.user);
           startActivity(intent);
           mode.finish();
@@ -820,7 +823,7 @@ public class AuthenticatorActivity extends TestableActivity {
      Bitmap bitmap = null;
      if (currentPin.providerType != null) {
         try {
-        bitmap = getBitmapFromAssets(AuthenticatorActivity.this, currentPin.providerType + "/menu_item_v2.png");
+            bitmap = getBitmapFromAssets(AuthenticatorActivity.this, currentPin.providerType + "/menu_item_v2.png");
         } catch (java.io.IOException e) {
            Log.e(LOCAL_TAG, "", e);
         }
