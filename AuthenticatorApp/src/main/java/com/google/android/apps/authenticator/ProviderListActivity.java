@@ -81,16 +81,26 @@ public class ProviderListActivity extends TestableActivity {
   private ListView mProviderList;
   private ProviderAdapter mAdapter;
 
-  private String[] mProviders = {
-    "airbitz",
-    "bitcoin",
-    "digitalocean",
-    "dropbox",
-    "facebook",
-    "github",
-    "gmail",
-    "google",
-    "other"
+  static class Provider {
+    String id;
+    String name;
+
+    Provider(String i, String n) {
+      id = i;
+      name = n;
+    }
+  }
+
+  private Provider[] mProviders = {
+    new Provider("airbitz", "Airbitz"),
+    new Provider("bitcoin", "Bitcoin"),
+    new Provider("digitalocean", "Digital Ocean"),
+    new Provider("dropbox", "Dropbox"),
+    new Provider("facebook", "Facebook"),
+    new Provider("github", "Github"),
+    new Provider("gmail", "Gmail"),
+    new Provider("google", "Google"),
+    new Provider("other", "Other")
   };
 
   /** Called when the activity is first created. */
@@ -112,25 +122,25 @@ public class ProviderListActivity extends TestableActivity {
       @Override
       public void onItemClick(AdapterView<?> parent, View row,
                               int position, long unusedId) {
-        String provider = (String) parent.getItemAtPosition(position);
+        Provider provider = (Provider) parent.getItemAtPosition(position);
         Intent intent = new Intent();
-        intent.putExtra(PROVIDER_TYPE, provider);
+        intent.putExtra(PROVIDER_TYPE, provider.id);
         setResult(RESULT_OK, intent);
         finish();
       }
     });
   }
 
-  private class ProviderAdapter extends ArrayAdapter<String>  {
+  private class ProviderAdapter extends ArrayAdapter<Provider>  {
 
-    public ProviderAdapter(Context context, String[] providers) {
+    public ProviderAdapter(Context context, Provider[] providers) {
       super(context, R.layout.item_provider, providers);
     }
 
     @Override
     public View getView(int position, View convertView, ViewGroup parent){
      LayoutInflater inflater = getLayoutInflater();
-     String provider = getItem(position);
+     Provider provider = getItem(position);
 
      View row;
      if (convertView != null) {
@@ -139,10 +149,10 @@ public class ProviderListActivity extends TestableActivity {
        row = inflater.inflate(R.layout.item_provider, null);
      }
      TextView userView = (TextView) row.findViewById(R.id.provider);
-     userView.setText(provider);
+     userView.setText(provider.name);
 
      ImageView icon = (ImageView) row.findViewById(R.id.icon);
-     Bitmap bitmap = ImageUtilities.getMenuBitmap(ProviderListActivity.this, provider);
+     Bitmap bitmap = ImageUtilities.getMenuBitmap(ProviderListActivity.this, provider.id);
      if (null != bitmap) {
         icon.setImageBitmap(bitmap);
      }
