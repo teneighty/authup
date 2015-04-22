@@ -21,10 +21,10 @@
   <string name="app_package_name" translatable="false">com.google.android.apps.authenticator2</string>
 
   <!-- Name of the application -->
-  <string name="app_name">Auth-Up</string>
+  <string name="app_name">Auth Up</string>
 
   <!-- Shortened version of the application name, without Google branding -->
-  <string name="app_name_short">Auth-Up</string>
+  <string name="app_name_short">Auth Up</string>
 
   <!-- Title displayed at the top when adding new OTP account manually -->
   <string name="enter_key_title">Manual account entry</string>
@@ -36,6 +36,10 @@
   <!-- Button on the Manual Account Entry page to add the account the details of which the user
        is entering on the page. -->
   <string name="enter_key_page_done_button">Done</string>
+
+  <string name="enter_key_page_change_icon">Change Icon</string>
+
+  <string name="enter_key_page_set_icon">Set Icon</string>
 
   <!-- Label for a button on the main screen: add a new OTP account -->
   <string name="button_add_account">Add an account</string>

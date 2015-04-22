@@ -21,10 +21,12 @@ import com.google.android.apps.authenticator.Base32String.DecodingException;
 import com.google.android.apps.authenticator.testability.DependencyInjector;
 import com.google.android.apps.authenticator.testability.TestableActivity;
 import com.google.android.apps.authenticator.wizard.WizardPageActivity;
+import com.google.android.apps.authenticator.utils.ImageUtilities;
 import com.google.android.apps.authenticator2.R;
 
 import android.app.ActionBar;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -33,6 +35,7 @@ import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.Spinner;
 
 import java.io.Serializable;
@@ -47,12 +50,16 @@ public class EnterKeyActivity extends TestableActivity implements TextWatcher {
   private static final int MIN_KEY_BYTES = 10;
   private EditText mKeyEntryField;
   private EditText mAccountName;
-  private EditText mProviderTypeEdit;
   private Spinner mType;
+  private ImageView mLogo;
 
+  private Button mChangeIcon;
   private Button mDone;
   private AccountDb mAccountDb;
   private String mUser;
+  private String mProviderType;
+
+  private static final int PICK_PROVIDER = 1;
 
   /**
    * Called when the activity is first created
@@ -68,11 +75,20 @@ public class EnterKeyActivity extends TestableActivity implements TextWatcher {
 
     mAccountDb = DependencyInjector.getAccountDb();
 
-    // Find all the views on the page
+    mLogo = (ImageView) findViewById(R.id.provider_logo);
     mKeyEntryField = (EditText) findViewById(R.id.key_value);
     mAccountName = (EditText) findViewById(R.id.account_name);
     mType = (Spinner) findViewById(R.id.type_choice);
-    mProviderTypeEdit = (EditText) findViewById(R.id.provider_type);
+
+    mChangeIcon = (Button) findViewById(R.id.change_icon);
+    mChangeIcon.setOnClickListener(new View.OnClickListener() {
+      public void onClick(View v) {
+        Intent intent = new Intent(Intent.ACTION_PICK);
+        intent.setClass(EnterKeyActivity.this, ProviderListActivity.class);
+        startActivityForResult(intent, PICK_PROVIDER);
+      }
+    });
+
     mDone = (Button) findViewById(R.id.done_button);
     mDone.setOnClickListener(new View.OnClickListener() {
       public void onClick(View v) {
@@ -88,7 +104,7 @@ public class EnterKeyActivity extends TestableActivity implements TextWatcher {
               mUser,
               mode,
               AccountDb.DEFAULT_HOTP_COUNTER,
-              mProviderTypeEdit.getText().toString());
+              mProviderType);
           finish();
         }
       }
@@ -107,20 +123,28 @@ public class EnterKeyActivity extends TestableActivity implements TextWatcher {
     if (null != mUser) {
       mAccountName.setText(mUser);
       mKeyEntryField.setText(mAccountDb.getSecret(mUser));
-      // mType.setSelectedItemPosition();
-      String providerType = mAccountDb.getProviderType(mUser);
-      mProviderTypeEdit.setText(providerType == null ? "" : providerType);
+      mProviderType = mAccountDb.getProviderType(mUser);
+      setLogo();
+    }
+  }
+
+  private void setLogo() {
+    Bitmap bitmap = ImageUtilities.getLogo(this, mProviderType);
+    if (null != bitmap) {
+      mLogo.setImageBitmap(bitmap);
+      mLogo.setVisibility(View.VISIBLE);
+      mChangeIcon.setText(R.string.enter_key_page_change_icon);
+    } else {
+      mLogo.setVisibility(View.GONE);
+      mChangeIcon.setText(R.string.enter_key_page_set_icon);
     }
   }
 
   @Override
-  public boolean onOptionsItemSelected(MenuItem item) {
-    switch (item.getItemId()) {
-      case android.R.id.home:
-        finish();
-        return true;
-      default:
-        return super.onOptionsItemSelected(item);
+  protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+    if (requestCode == PICK_PROVIDER && null != data) {
+      mProviderType = data.getStringExtra(ProviderListActivity.PROVIDER_TYPE);
+      setLogo();
     }
   }
 

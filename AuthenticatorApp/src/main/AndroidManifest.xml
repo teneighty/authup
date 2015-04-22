@@ -57,6 +57,9 @@
     <activity android:name="com.google.android.apps.authenticator.SecretExportActivity"
               android:label="@string/app_name_short" />
 
+    <activity android:name="com.google.android.apps.authenticator.ProviderListActivity"
+              android:label="@string/app_name_short" />
+
     <activity android:name="com.google.android.apps.authenticator.SettingsAboutActivity"
               android:label="@string/about_preference_screen_title" />
 

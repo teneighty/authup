@@ -20,6 +20,7 @@ import com.google.android.apps.authenticator2.R;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.view.MenuItem;
 
 /**
  * Base class for {@link Activity} instances to make them more testable.
@@ -40,12 +41,6 @@ public class TestableActivity extends Activity {
   }
 
   @Override
-  public void finish() {
-    super.finish();
-    super.overridePendingTransition(R.anim.fade_in_enter, R.anim.slide_out_right);
-  }
-
-  @Override
   public void startActivityForResult(Intent intent, int requestCode) {
     StartActivityListener listener = DependencyInjector.getStartActivityListener();
     if ((listener != null) && (listener.onStartActivityInvoked(this, intent))) {
@@ -53,5 +48,23 @@ public class TestableActivity extends Activity {
     }
 
     super.startActivityForResult(intent, requestCode);
+    super.overridePendingTransition(R.anim.slide_in_right, R.anim.fade_out_exit);
+  }
+
+  @Override
+  public void finish() {
+    super.finish();
+    super.overridePendingTransition(R.anim.fade_in_enter, R.anim.slide_out_right);
+  }
+
+  @Override
+  public boolean onOptionsItemSelected(MenuItem item) {
+    switch (item.getItemId()) {
+      case android.R.id.home:
+        finish();
+        return true;
+      default:
+        return super.onOptionsItemSelected(item);
+    }
   }
 }
