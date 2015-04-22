@@ -29,6 +29,9 @@
   <!-- Title displayed at the top when adding new OTP account manually -->
   <string name="enter_key_title">Manual account entry</string>
 
+  <!-- Title displayed at the top when adding new OTP account manually -->
+  <string name="enter_key_title_edit">Edit entry</string>
+
   <!-- Button on the Manual Account Entry page to add the account the details of which the user
        is entering on the page. -->
   <string name="enter_key_page_add_button">Add</string>

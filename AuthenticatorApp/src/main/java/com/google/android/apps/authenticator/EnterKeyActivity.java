@@ -58,6 +58,7 @@ public class EnterKeyActivity extends TestableActivity implements TextWatcher {
   private AccountDb mAccountDb;
   private String mUser;
   private String mProviderType;
+  private String mSecret;
 
   private static final int PICK_PROVIDER = 1;
 
@@ -121,11 +122,13 @@ public class EnterKeyActivity extends TestableActivity implements TextWatcher {
     Intent intent = getIntent();
     mUser = intent.getStringExtra("user");
     if (null != mUser) {
-      mAccountName.setText(mUser);
-      mKeyEntryField.setText(mAccountDb.getSecret(mUser));
+      setTitle(R.string.enter_key_title_edit);
       mProviderType = mAccountDb.getProviderType(mUser);
-      setLogo();
+      mSecret = mAccountDb.getSecret(mUser);
+      mAccountName.setText(mUser);
+      mKeyEntryField.setVisibility(View.GONE); // Done show key entry field
     }
+    setLogo();
   }
 
   private void setLogo() {
@@ -152,8 +155,12 @@ public class EnterKeyActivity extends TestableActivity implements TextWatcher {
    * Return key entered by user, replacing visually similar characters 1 and 0.
    */
   private String getEnteredKey() {
-    String enteredKey = mKeyEntryField.getText().toString();
-    return enteredKey.replace('1', 'I').replace('0', 'O');
+    if (mSecret != null) {
+      return mSecret;
+    } else {
+      String enteredKey = mKeyEntryField.getText().toString();
+      return enteredKey.replace('1', 'I').replace('0', 'O');
+    }
   }
 
   /*
@@ -161,6 +168,10 @@ public class EnterKeyActivity extends TestableActivity implements TextWatcher {
    * and meets minimum key requirements.
    */
   private boolean validateKeyAndUpdateStatus(boolean submitting) {
+    // We won't touch the secret in edit mode sooo...peace
+    if (mUser != null) {
+      return true;
+    }
     String userEnteredKey = getEnteredKey();
     try {
       byte[] decoded = Base32String.decode(userEnteredKey);
