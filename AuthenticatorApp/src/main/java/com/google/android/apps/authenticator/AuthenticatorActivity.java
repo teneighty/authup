@@ -21,6 +21,7 @@ import com.google.android.apps.authenticator.dataimport.ImportController;
 import com.google.android.apps.authenticator.howitworks.IntroEnterPasswordActivity;
 import com.google.android.apps.authenticator.testability.DependencyInjector;
 import com.google.android.apps.authenticator.testability.TestableActivity;
+import com.google.android.apps.authenticator.utils.ImageUtilities;
 import com.google.android.apps.authenticator2.R;
 
 import android.app.Activity;
@@ -34,7 +35,6 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
@@ -820,14 +820,7 @@ public class AuthenticatorActivity extends TestableActivity {
      TextView prefix = (TextView) row.findViewById(R.id.prefix);
 
      ImageView image = (ImageView) row.findViewById(R.id.image);
-     Bitmap bitmap = null;
-     if (currentPin.providerType != null) {
-        try {
-            bitmap = getBitmapFromAssets(AuthenticatorActivity.this, currentPin.providerType + "/menu_item_v2.png");
-        } catch (java.io.IOException e) {
-           Log.e(LOCAL_TAG, "", e);
-        }
-     }
+     Bitmap bitmap = ImageUtilities.getMenuBitmap(AuthenticatorActivity.this, currentPin.providerType);
      if (null == bitmap) {
         prefix.setText(currentPin.user.substring(0, 1));
         prefix.setVisibility(View.VISIBLE);
@@ -839,13 +832,6 @@ public class AuthenticatorActivity extends TestableActivity {
      }
      return row;
     }
-  }
-
-  public static Bitmap getBitmapFromAssets(Context context, String fileName) throws java.io.IOException {
-    AssetManager assetManager = context.getAssets();
-    InputStream is = assetManager.open(fileName);
-    Bitmap bitmap = BitmapFactory.decodeStream(is);
-    return bitmap;
   }
 
   public void refreshUserList(boolean isAccountModified) {

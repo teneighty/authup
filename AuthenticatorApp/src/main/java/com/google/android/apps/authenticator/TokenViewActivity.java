@@ -21,6 +21,7 @@ import com.google.android.apps.authenticator.dataimport.ImportController;
 import com.google.android.apps.authenticator.howitworks.IntroEnterPasswordActivity;
 import com.google.android.apps.authenticator.testability.DependencyInjector;
 import com.google.android.apps.authenticator.testability.TestableActivity;
+import com.google.android.apps.authenticator.utils.ImageUtilities;
 import com.google.android.apps.authenticator2.R;
 
 import android.app.ActionBar;
@@ -149,14 +150,7 @@ public class TokenViewActivity extends TestableActivity {
 
   private void setLogo() {
     String providerType = mAccountDb.getProviderType(mUser);
-    Bitmap bitmap = null;
-    if (providerType != null) {
-      try {
-        bitmap = AuthenticatorActivity.getBitmapFromAssets(this, providerType + "/logo.png");
-      } catch (java.io.IOException e) {
-         Log.e(TAG, "", e);
-      }
-    }
+    Bitmap bitmap = ImageUtilities.getLogo(this, providerType);
     if (null != bitmap) {
       mImage.setImageBitmap(bitmap);
       mImage.setVisibility(View.VISIBLE);
