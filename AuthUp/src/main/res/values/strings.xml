@@ -226,6 +226,9 @@
   <!-- Long-press menu item for an account, used to edit that account -->
   <string name="edit">Edit</string>
 
+  <!-- Long-press menu item for an account, used to delete that account -->
+  <string name="delete">Delete</string>
+
   <!-- Long-press menu item for an account, used to Export that account -->
   <string name="export">Export</string>
 

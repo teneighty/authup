@@ -510,7 +510,7 @@ public class AuthenticatorActivity extends TestableActivity {
   }
 
   private void scanBarcode() {
-    Intent intentScan = new Intent("io.authup.zxing.client.android.SCAN");
+    Intent intentScan = new Intent("com.google.zxing.client.android.SCAN");
     intentScan.putExtra("SCAN_MODE", "QR_CODE_MODE");
     intentScan.putExtra("SAVE_HISTORY", false);
     try {
@@ -752,6 +752,13 @@ public class AuthenticatorActivity extends TestableActivity {
           startActivity(intent);
           mode.finish();
           return true;
+        case R.id.token_delete: {
+          AccountDb accountDb = DependencyInjector.getAccountDb();
+          accountDb.delete(user.user);
+          mode.finish();
+          refreshUserList(true);
+          return true;
+        }
         case R.id.token_export:
           intent = new Intent(Intent.ACTION_EDIT);
           intent.setClass(AuthenticatorActivity.this, SecretExportActivity.class);

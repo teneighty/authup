@@ -29,7 +29,7 @@ import android.webkit.WebView;
 public class Utilities {
   // Links
   public static final String ZXING_MARKET =
-    "market://search?q=pname:io.authup.zxing.client.android";
+    "market://search?q=pname:com.google.zxing.client.android";
   public static final String ZXING_DIRECT =
     "https://zxing.googlecode.com/files/BarcodeScanner3.1.apk";
 
