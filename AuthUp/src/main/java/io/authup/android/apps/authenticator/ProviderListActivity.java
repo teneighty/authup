@@ -94,6 +94,8 @@ public class ProviderListActivity extends TestableActivity {
   private Provider[] mProviders = {
     new Provider("airbitz", "Airbitz"),
     new Provider("bitcoin", "Bitcoin"),
+    new Provider("bitwage", "Bit Wage"),
+    new Provider("purse", "Purse.io"),
     new Provider("digitalocean", "Digital Ocean"),
     new Provider("dropbox", "Dropbox"),
     new Provider("facebook", "Facebook"),
